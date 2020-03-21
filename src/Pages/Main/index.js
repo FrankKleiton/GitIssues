@@ -13,6 +13,7 @@ export default class Main extends Component {
             newRepo: '',
             repositories: [],
             loading: false,
+            isValid: true,
         };
     }
 
@@ -27,7 +28,7 @@ export default class Main extends Component {
     }
 
     componentDidUpdate(_, prev) {
-        const { repositories } = this.state;
+        const { repositories, isValid } = this.state;
 
         if (repositories !== prev.repositories) {
             localStorage.setItem('repositories', JSON.stringify(repositories));
@@ -40,33 +41,46 @@ export default class Main extends Component {
 
     handleSubmit = async e => {
         e.preventDefault();
+        try {
+            this.setState({ loading: true });
 
-        this.setState({ loading: true });
+            const { newRepo, repositories } = this.state;
 
-        const { newRepo, repositories } = this.state;
+            repositories.forEach(r => {
+                if (r.name.toUpperCase() === newRepo.toUpperCase()) {
+                    throw new Error('Repositório Duplicado');
+                }
+            });
 
-        const response = await api.get(`/repos/${newRepo}`);
+            const response = await api.get(`/repos/${newRepo}`);
 
-        const data = {
-            name: response.data.full_name,
-        };
+            const data = {
+                name: response.data.full_name,
+            };
 
-        this.setState({
-            repositories: [...repositories, data],
-            newRepo: '',
-            loading: false,
-        });
+            this.setState({
+                repositories: [...repositories, data],
+                newRepo: '',
+                loading: false,
+                isValid: true,
+            });
+        } catch (err) {
+            this.setState({
+                isValid: false,
+                loading: false,
+            });
+        }
     };
 
     render() {
-        const { newRepo, repositories, loading } = this.state;
+        const { newRepo, repositories, loading, isValid } = this.state;
         return (
             <Container>
                 <h1>
                     <FaGithubAlt />
                     Repositórios
                 </h1>
-                <Form onSubmit={this.handleSubmit}>
+                <Form onSubmit={this.handleSubmit} isValid={isValid}>
                     <input
                         type="text"
                         placeholder="Adicionar repositório"
